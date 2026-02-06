@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE ONLY CHANCE - 30 Day Sprint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@700&family=Oswald:wght@700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; padding-bottom: 20px; }
+        .mono { font-family: 'JetBrains+Mono', monospace; }
+        .heading-font { font-family: 'Oswald', sans-serif; }
+        .card { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1.5rem; padding: 1.5rem; }
+        .task-pending { border-left: 4px solid #f43f5e !important; }
+        .task-done { border-left: 4px solid #10b981 !important; }
+        
+        .expand-content { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out, opacity 0.2s; opacity: 0; }
+        .expanded .expand-content { grid-template-rows: 1fr; opacity: 1; padding-top: 1rem; }
+        .section-collapsed { display: none !important; }
+        
+        table { table-layout: fixed; width: 100%; }
+        th, td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        #ghost-footer { opacity: 0; transform: translateY(20px); transition: all 0.4s ease; pointer-events: none; }
+        #ghost-footer.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #ec4899; }
+        select { appearance: none; background-color: #0f172a; border: 1px solid #334155; border-radius: 4px; color: #94a3b8; font-size: 9px; padding: 2px 4px; }
+        .streak-glow { text-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+    </style>
+</head>
+<body>
+
+    <header class="max-w-7xl mx-auto text-center py-12">
+        <h1 class="heading-font text-6xl md:text-8xl font-bold text-white mb-4 tracking-tighter uppercase opacity-20">THE ONLY CHANCE</h1>
+        <div id="countdown" class="mono text-4xl md:text-6xl font-bold text-emerald-400 tracking-tighter">00d 00h 00m 00s</div>
+        <p class="text-slate-500 mt-4 text-xs uppercase tracking-[0.3em]">Execution Phase • Daily Reset at Midnight</p>
+    </header>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-3 gap-6 px-4 mb-20">
+        
+        <div class="xl:col-span-2 space-y-6">
+            <section class="card">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-purple-400"><i data-lucide="briefcase"></i> SDE Applications</h2>
+                    <button onclick="addCompanyRow()" class="text-[10px] bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded-md transition">ADD COMPANY</button>
+                </div>
+                <div class="w-full">
+                    <table class="border-collapse">
+                        <thead>
+                            <tr class="text-slate-500 text-[10px] uppercase tracking-wider border-b border-slate-800 text-left">
+                                <th class="pb-3 w-[20%]">Company</th>
+                                <th class="pb-3 w-[20%]">Status</th>
+                                <th class="pb-3 w-[15%]">Date</th>
+                                <th class="pb-3 w-[15%]">Location</th>
+                                <th class="pb-3 w-[15%]">Role</th>
+                                <th class="pb-3 w-[10%]">Salary</th>
+                                <th class="pb-3 w-[5%]"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="company-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-blue-400"><i data-lucide="layout-list"></i> LeetCode Mastery</h2>
+                    <div class="flex gap-2">
+                        <button id="lc-section-toggle" onclick="toggleLcSection()" class="text-[10px] bg-slate-800 px-2 py-1 rounded"><span id="lc-toggle-text">HIDE</span></button>
+                        <button onclick="addLeetCodeRow()" class="text-[10px] bg-blue-600 px-2 py-1 rounded">NEW Q</button>
+                    </div>
+                </div>
+                <div id="leetcode-list-wrapper" class="space-y-3">
+                    <div id="leetcode-list" class="space-y-3"></div>
+                </div>
+            </section>
+        </div>
+
+        <div class="space-y-6">
+            <section class="card border-orange-500/30">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-orange-400"><i data-lucide="zap"></i> Daily Habits</h2>
+                        <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Complete all to grow streak</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-center gap-1 text-amber-500 font-bold streak-glow">
+                            <i data-lucide="flame" class="w-4 h-4"></i>
+                            <span id="streak-count" class="mono text-lg">0</span>
+                        </div>
+                        <p class="text-[8px] text-slate-600 uppercase">Best: <span id="best-streak">0</span></p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div id="ex-card" class="p-3 rounded-xl border border-slate-800 transition text-xs flex justify-between items-center">
+                        <span>Daily Exercise</span><input type="checkbox" id="ex-1" onchange="saveData()">
+                    </div>
+                    <div id="food-card" class="p-3 rounded-xl border border-slate-800 transition text-xs flex justify-between items-center">
+                        <span>Daily Fuel (3)</span><div class="flex gap-2"><input type="checkbox" id="f-1" onchange="saveData()"> <input type="checkbox" id="f-2" onchange="saveData()"> <input type="checkbox" id="f-3" onchange="saveData()"></div>
+                    </div>
+                    <div id="sleep-card" class="p-3 rounded-xl border border-slate-800 transition text-xs flex justify-between items-center">
+                        <span>Daily Rest</span><input type="checkbox" id="s-1" onchange="saveData()">
+                    </div>
+                    <div id="skill-container" class="space-y-3 pt-2 border-t border-slate-800"></div>
+                    <button onclick="addSkillRow()" class="w-full py-1 text-[9px] text-slate-500 hover:text-orange-400 border border-dashed border-slate-800 rounded-lg transition uppercase">+ Custom Daily Skill</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-emerald-400"><i data-lucide="github"></i> Repo Deployments</h2>
+                <div id="repo-list" class="space-y-3"></div>
+            </section>
+        </div>
+    </div>
+
+    <div id="ghost-footer" class="fixed bottom-6 left-0 right-0 px-4 z-50">
+        <div class="max-w-xs mx-auto flex gap-2 justify-center">
+            <button onclick="exportToExcel()" class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border border-emerald-600/30">
+                <i data-lucide="download" class="w-3 h-3"></i> EXPORT
+            </button>
+            <button onclick="clearAllData()" class="bg-red-900/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border border-red-900/30">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> WIPE
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let leetCodeRows = 3;
+        let companyCount = 0;
+        let skillCount = 0;
+        let lcSectionVisible = true;
+        let streak = 0;
+        let bestStreak = 0;
+
+        const STATUS_OPTIONS = ["Applied", "No Reply", "Rejection", "OA", "Interview", "R2", "R3", "Offer"];
+
+        window.onscroll = function() {
+            const ghost = document.getElementById('ghost-footer');
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50) {
+                ghost.classList.add('visible');
+            } else {
+                ghost.classList.remove('visible');
+            }
+        };
+
+        function checkDailyReset() {
+            const lastDate = localStorage.getItem('last_sprint_date');
+            const currentDate = new Date().toDateString();
+
+            if (lastDate && lastDate !== currentDate) {
+                const saved = JSON.parse(localStorage.getItem('30day_sprint_v14') || '{}');
+                
+                // Logic: Did we finish yesterday?
+                const yesterdayFinished = (saved.ex && saved.ex[0]) && 
+                                          (saved.food && saved.food.every(f => f)) && 
+                                          (saved.sleep && saved.sleep[0]);
+
+                if (!yesterdayFinished) {
+                    streak = 0; // Streak broken
+                }
+
+                // Reset daily habit checkboxes
+                saved.ex = [false];
+                saved.food = [false, false, false];
+                saved.sleep = [false];
+                saved.streak = streak;
+                
+                localStorage.setItem('30day_sprint_v14', JSON.stringify(saved));
+            }
+            localStorage.setItem('last_sprint_date', currentDate);
+        }
+
+        function toggleLcSection() {
+            lcSectionVisible = !lcSectionVisible;
+            document.getElementById('leetcode-list-wrapper').classList.toggle('section-collapsed', !lcSectionVisible);
+            document.getElementById('lc-toggle-text').innerText = lcSectionVisible ? "HIDE" : "SHOW";
+            lucide.createIcons();
+            saveData();
+        }
+
+        function addSkillRow(data = { name: 'New Task', progress: 0 }) {
+            skillCount++;
+            const container = document.getElementById('skill-container');
+            const div = document.createElement('div');
+            div.id = `skill-card-${skillCount}`;
+            div.className = "p-3 rounded-xl border border-slate-800 transition bg-slate-900/40 group";
+            div.innerHTML = `<div class="flex justify-between items-center text-[10px] mb-2 font-semibold text-pink-400"><input type="text" id="sk-name-${skillCount}" value="${data.name}" oninput="saveData()" class="bg-transparent outline-none w-2/3 border-b border-transparent focus:border-pink-500"><div class="flex items-center gap-1"><span id="sk-val-${skillCount}">${data.progress}%</span><button onclick="removeSkill(${skillCount})" class="text-slate-600 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></div></div><input type="range" id="sk-range-${skillCount}" min="0" max="100" value="${data.progress}" oninput="saveData()" class="w-full">`;
+            container.appendChild(div);
+            lucide.createIcons();
+            saveData();
+        }
+
+        function removeSkill(id) { document.getElementById(`skill-card-${id}`).remove(); saveData(); }
+
+        function addCompanyRow(data = {}) {
+            companyCount++;
+            const tbody = document.getElementById('company-table-body');
+            const tr = document.createElement('tr');
+            tr.id = `company-row-${companyCount}`;
+            tr.className = "border-b border-slate-800/50 hover:bg-slate-800/20 transition";
+            tr.innerHTML = `
+                <td class="py-2 pr-1"><input type="text" id="co-name-${companyCount}" value="${data.name || ''}" oninput="saveData()" placeholder="..." class="bg-transparent outline-none text-xs w-full font-semibold"></td>
+                <td class="py-2 pr-1"><select id="co-status-${companyCount}" onchange="saveData()" class="outline-none w-full">${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${data.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select></td>
+                <td class="py-2 pr-1"><input type="date" id="co-date-${companyCount}" value="${data.date || ''}" oninput="saveData()" class="bg-transparent outline-none text-[9px] text-slate-400 w-full"></td>
+                <td class="py-2 pr-1"><input type="text" id="co-loc-${companyCount}" value="${data.loc || ''}" oninput="saveData()" placeholder="..." class="bg-transparent outline-none text-[10px] w-full"></td>
+                <td class="py-2 pr-1"><input type="text" id="co-role-${companyCount}" value="${data.role || ''}" oninput="saveData()" placeholder="..." class="bg-transparent outline-none text-[10px] w-full"></td>
+                <td class="py-2 pr-1"><input type="text" id="co-sal-${companyCount}" value="${data.sal || ''}" oninput="saveData()" placeholder="..." class="bg-transparent outline-none text-[10px] w-full text-emerald-500"></td>
+                <td class="py-2 text-right"><button onclick="removeCompany(${companyCount})" class="text-slate-600 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td>`;
+            tbody.appendChild(tr);
+            lucide.createIcons();
+        }
+
+        function removeCompany(id) { document.getElementById(`company-row-${id}`).remove(); saveData(); }
+
+        function renderLeetCodeRow(id) {
+            const container = document.getElementById('leetcode-list');
+            const div = document.createElement('div');
+            div.id = `lc-card-${id}`;
+            div.className = "lc-row p-3 rounded-xl border border-slate-800 transition cursor-pointer task-pending";
+            div.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') { document.querySelectorAll('.lc-row').forEach(row => row.id === div.id ? row.classList.toggle('expanded') : row.classList.remove('expanded')); }};
+            div.innerHTML = `<div class="flex items-center justify-between"><div class="flex items-center gap-3"><input type="checkbox" id="lc-check-${id}" onchange="saveData()" class="w-4 h-4 accent-emerald-500"><span id="lc-label-${id}" class="text-xs font-bold text-slate-400">Q${id}</span></div><i data-lucide="chevron-down" class="w-3 h-3 text-slate-600"></i></div><div class="expand-content"><div class="overflow-hidden space-y-2"><input type="text" id="lc-name-${id}" oninput="saveData()" placeholder="Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs outline-none"><textarea id="lc-note-${id}" oninput="saveData()" placeholder="Notes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-[10px] h-16 outline-none"></textarea></div></div>`;
+            container.appendChild(div);
+        }
+
+        function updateVisuals() {
+            for(let i=1; i<=leetCodeRows; i++) {
+                const isChecked = document.getElementById(`lc-check-${i}`)?.checked;
+                const card = document.getElementById(`lc-card-${i}`);
+                if(card) {
+                    card.classList.toggle('task-done', isChecked);
+                    card.classList.toggle('task-pending', !isChecked);
+                    document.getElementById(`lc-label-${i}`).classList.toggle('text-emerald-400', isChecked);
+                }
+            }
+            const checkBlock = (ids, cardId) => {
+                const done = ids.every(id => document.getElementById(id) && document.getElementById(id).checked);
+                document.getElementById(cardId).className = done ? "p-3 rounded-xl transition task-done border border-slate-800 text-xs flex justify-between items-center" : "p-3 rounded-xl transition task-pending border border-slate-800 text-xs flex justify-between items-center";
+                return done;
+            };
+            const exDone = checkBlock(['ex-1'], 'ex-card');
+            const foodDone = checkBlock(['f-1', 'f-2', 'f-3'], 'food-card');
+            const sleepDone = checkBlock(['s-1'], 'sleep-card');
+
+            // Streak Logic Update
+            const allDailyHabitsDone = exDone && foodDone && sleepDone;
+            if (allDailyHabitsDone) {
+                const today = new Date().toDateString();
+                const lastStreakDate = localStorage.getItem('last_streak_increment_date');
+                if (lastStreakDate !== today) {
+                    streak++;
+                    localStorage.setItem('last_streak_increment_date', today);
+                    if (streak > bestStreak) bestStreak = streak;
+                    saveData();
+                }
+            }
+
+            document.getElementById('streak-count').innerText = streak;
+            document.getElementById('best-streak').innerText = bestStreak;
+
+            document.querySelectorAll('[id^="skill-card-"]').forEach(card => {
+                const id = card.id.split('-').pop();
+                const range = document.getElementById(`sk-range-${id}`);
+                document.getElementById(`sk-val-${id}`).innerText = range.value + "%";
+                card.className = range.value == 100 ? "p-3 rounded-xl border border-slate-800 transition task-done bg-slate-900/40 group" : "p-3 rounded-xl border border-slate-800 transition task-pending bg-slate-900/40 group";
+            });
+        }
+
+        function init() {
+            checkDailyReset();
+            const saved = JSON.parse(localStorage.getItem('30day_sprint_v14') || '{}');
+            leetCodeRows = saved.lcCount || 3;
+            streak = saved.streak || 0;
+            bestStreak = saved.bestStreak || 0;
+            
+            for (let i = 1; i <= leetCodeRows; i++) renderLeetCodeRow(i);
+            const repoContainer = document.getElementById('repo-list');
+            for (let i = 1; i <= 5; i++) {
+                repoContainer.innerHTML += `<div id="repo-card-${i}" class="grid grid-cols-2 gap-2 p-3 border border-slate-800 rounded-xl transition task-pending"><input type="text" id="rn-${i}" oninput="saveData()" placeholder="Repo ${i}" class="bg-transparent text-[10px] outline-none"><input type="text" id="ru-${i}" oninput="saveData()" placeholder="URL" class="bg-transparent text-[10px] text-emerald-500 outline-none"></div>`;
+            }
+            loadData(saved);
+            if(!saved.skills) addSkillRow({ name: 'Practice Whistle', progress: 0 });
+            lucide.createIcons();
+            setInterval(updateTimer, 1000);
+        }
+
+        function saveData() {
+            const skills = [];
+            document.querySelectorAll('[id^="skill-card-"]').forEach(card => {
+                const id = card.id.split('-').pop();
+                skills.push({ name: document.getElementById(`sk-name-${id}`).value, progress: document.getElementById(`sk-range-${id}`).value });
+            });
+            const companies = [];
+            for(let i=1; i<=companyCount; i++) {
+                const row = document.getElementById(`company-row-${i}`);
+                if(row) companies.push({ name: document.getElementById(`co-name-${i}`).value, status: document.getElementById(`co-status-${i}`).value, date: document.getElementById(`co-date-${i}`).value, loc: document.getElementById(`co-loc-${i}`).value, role: document.getElementById(`co-role-${i}`).value, sal: document.getElementById(`co-sal-${i}`).value });
+            }
+            const data = {
+                lcCount: leetCodeRows,
+                lcVisible: lcSectionVisible,
+                streak, bestStreak,
+                lc: Array.from({length: leetCodeRows}, (_, i) => ({ done: document.getElementById(`lc-check-${i+1}`).checked, name: document.getElementById(`lc-name-${i+1}`).value, note: document.getElementById(`lc-note-${i+1}`).value })),
+                repos: Array.from({length: 5}, (_, i) => ({ n: document.getElementById(`rn-${i+1}`).value, u: document.getElementById(`ru-${i+1}`).value })),
+                companies, skills,
+                ex: [document.getElementById('ex-1').checked],
+                food: [document.getElementById('f-1').checked, document.getElementById('f-2').checked, document.getElementById('f-3').checked],
+                sleep: [document.getElementById('s-1').checked]
+            };
+            localStorage.setItem('30day_sprint_v14', JSON.stringify(data));
+            updateVisuals();
+        }
+
+        function loadData(d) {
+            if (d.lc) d.lc.forEach((q, i) => { if(i < leetCodeRows) { document.getElementById(`lc-check-${i+1}`).checked = q.done; document.getElementById(`lc-name-${i+1}`).value = q.name; document.getElementById(`lc-note-${i+1}`).value = q.note; } });
+            if (d.repos) d.repos.forEach((v, i) => { document.getElementById(`rn-${i+1}`).value = v.n; document.getElementById(`ru-${i+1}`).value = v.u; document.getElementById(`repo-card-${i+1}`).classList.toggle('task-done', !!v.u); });
+            if (d.companies) { document.getElementById('company-table-body').innerHTML = ""; companyCount = 0; d.companies.forEach(c => addCompanyRow(c)); }
+            if (d.skills) { document.getElementById('skill-container').innerHTML = ""; skillCount = 0; d.skills.forEach(s => addSkillRow(s)); }
+            if (d.ex) { document.getElementById('ex-1').checked = d.ex[0]; }
+            if (d.food) { 
+                if(document.getElementById(`f-1`)) document.getElementById(`f-1`).checked = d.food[0];
+                if(document.getElementById(`f-2`)) document.getElementById(`f-2`).checked = d.food[1];
+                if(document.getElementById(`f-3`)) document.getElementById(`f-3`).checked = d.food[2];
+            }
+            if (d.sleep) { document.getElementById('s-1').checked = d.sleep[0]; }
+            lcSectionVisible = d.lcVisible !== undefined ? d.lcVisible : true;
+            if(!lcSectionVisible) document.getElementById('leetcode-list-wrapper').classList.add('section-collapsed');
+            updateVisuals();
+        }
+
+        function updateTimer() {
+            const start = new Date(); start.setHours(22, 0, 0, 0);
+            const diff = (start.getTime() + (30 * 24 * 60 * 60 * 1000)) - new Date().getTime();
+            if (diff <= 0) { document.getElementById('countdown').innerHTML = "THE CHANCE HAS PASSED"; return; }
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById('countdown').innerHTML = `${d}d ${h}h ${m}m ${s}s`;
+        }
+
+        function addLeetCodeRow() { leetCodeRows++; renderLeetCodeRow(leetCodeRows); lucide.createIcons(); saveData(); }
+        function clearAllData() { if(confirm("Permanently delete everything?")) { localStorage.clear(); location.reload(); } }
+        function exportToExcel() {
+            const d = JSON.parse(localStorage.getItem('30day_sprint_v14'));
+            let csv = "Category,Detail,Status\n";
+            d.companies.forEach(c => csv += `Job,${c.name} - ${c.role},${c.status}\n`);
+            d.lc.forEach(q => csv += `LeetCode,${q.name},${q.done ? 'DONE' : 'PENDING'}\n`);
+            window.open('data:text/csv;charset=utf-8,' + encodeURI(csv));
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
